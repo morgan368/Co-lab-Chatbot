@@ -221,7 +221,7 @@ async function sendMsg() {
       body: JSON.stringify({ messages: msgs })
     });
     const data = await res.json();
-    const reply = data.content?.find(b => b.type === 'text')?.text
+    const reply = data.reply
       || "Sorry, I couldn't get a response. Please email youssef@co-lab.com.";
     thinking.textContent = reply;
     thinking.classList.remove('typing');
