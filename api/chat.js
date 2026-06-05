@@ -149,12 +149,12 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    const reply = data.content?.[0]?.text || "Sorry, I could not get a response. Please email youssef@co-lab.com.";
+    const reply = data.content?.[0]?.text || "Sorry, I could not get a response. Please email youssef@co-lab.online.";
 
     await saveLog(sessionId, lastUserMsg, reply, userData);
     res.json({ reply });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ reply: "Something went wrong. Please email youssef@co-lab.com." });
+    res.status(500).json({ reply: "Something went wrong. Please email youssef@co-lab.online." });
   }
 }
