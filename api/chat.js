@@ -1,20 +1,23 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-async function saveLog(sessionId, userMessage, botReply) {
+async function saveLog(sessionId, userMessage, botReply, userData) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/chat_logs`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Prefer": "return=minimal",
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        Prefer: "return=minimal",
       },
       body: JSON.stringify({
         session_id: sessionId || "unknown",
         user_message: userMessage,
         bot_reply: botReply,
+        user_name: userData?.name || null,
+        user_email: userData?.email || null,
+        user_phone: userData?.phone || null,
       }),
     });
   } catch (err) {
@@ -111,6 +114,7 @@ MAIL AND ADDRESS:
 
 GENERAL GUIDANCE:
 - Always be warm, friendly, and clear — many clients are first-time food business owners
+- Always address the user by their first name when appropriate
 - Youssef is the permits compliance coordinator. He guides clients through permits, insurance, food manager certificate, and getting onboarding booked. He does not handle membership, booking, or onsite questions.
 - The Co-Lab operations team will be the client's go-to representatives once they finish the permit assistance process.
 - For permit and application questions you cannot answer, direct the client to youssef@co-lab.com
@@ -120,8 +124,13 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { messages, sessionId } = req.body;
+    const { messages, sessionId, userData } = req.body;
     const lastUserMsg = messages?.at(-1)?.content || "";
+
+    // Build system prompt with user context
+    const systemWithUser = userData?.name
+      ? `${SYSTEM_PROMPT}\n\nCURRENT USER: ${userData.name} (${userData.email}, ${userData.phone}). Address them by first name.`
+      : SYSTEM_PROMPT;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -133,18 +142,15 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 1000,
-        system: SYSTEM_PROMPT,
+        system: systemWithUser,
         messages,
       }),
     });
 
     const data = await response.json();
-    const reply =
-      data.content?.[0]?.text ||
-      "Sorry, I could not get a response. Please email youssef@co-lab.com.";
+    const reply = data.content?.[0]?.text || "Sorry, I could not get a response. Please email youssef@co-lab.com.";
 
-    await saveLog(sessionId, lastUserMsg, reply);
-
+    await saveLog(sessionId, lastUserMsg, reply, userData);
     res.json({ reply });
   } catch (err) {
     console.error(err);

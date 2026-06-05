@@ -36,6 +36,7 @@
       align-items: center;
       gap: 0.75rem;
       border-radius: 16px 16px 0 0;
+      flex-shrink: 0;
     }
     .header-logo {
       width: 36px; height: 36px;
@@ -48,6 +49,82 @@
     .header-text p { font-size: 0.75rem; color: #aaa; margin-top: 1px; }
     .status { display: flex; align-items: center; gap: 0.4rem; margin-left: auto; font-size: 0.75rem; color: #aaa; }
     .dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; }
+
+    /* Welcome screen */
+    #welcome-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+    }
+    .welcome-inner {
+      width: 100%;
+      max-width: 380px;
+    }
+    .welcome-inner h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: #1a1a1a;
+    }
+    .welcome-inner p {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .form-group {
+      margin-bottom: 0.85rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 0.3rem;
+    }
+    .form-group input {
+      width: 100%;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.88rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus { border-color: #1a1a1a; }
+    #start-btn {
+      width: 100%;
+      background: #1a1a1a;
+      color: #e8ff47;
+      border: none;
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.15s;
+    }
+    #start-btn:disabled { opacity: 0.4; cursor: default; }
+    #start-btn:hover:not(:disabled) { opacity: 0.85; }
+    .form-err { font-size: 0.78rem; color: #dc2626; margin-top: 0.75rem; text-align: center; }
+
+    /* Chat screen */
+    #chat-screen { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .user-badge {
+      padding: 0.5rem 1.25rem;
+      background: #f9f9f5;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.76rem;
+      color: #777;
+      flex-shrink: 0;
+    }
+    .user-badge strong { color: #333; }
     .messages {
       flex: 1;
       overflow-y: auto;
@@ -78,6 +155,7 @@
     .quick-btns {
       padding: 0 1.25rem 0.75rem;
       display: flex; flex-wrap: wrap; gap: 0.4rem;
+      flex-shrink: 0;
     }
     .quick-btns button {
       background: #f4f4f0; border: none; border-radius: 20px;
@@ -89,6 +167,7 @@
       padding: 0.75rem 1.25rem 1rem;
       display: flex; gap: 0.5rem; align-items: flex-end;
       border-top: 1px solid #f0f0f0;
+      flex-shrink: 0;
     }
     #userinput {
       flex: 1; border: 1.5px solid #e0e0e0; border-radius: 12px;
@@ -109,6 +188,7 @@
     .footer-note {
       text-align: center; font-size: 0.74rem; color: #aaa;
       padding: 0 1.25rem 0.85rem;
+      flex-shrink: 0;
     }
     .footer-note a { color: #666; }
   </style>
@@ -127,34 +207,102 @@
     </div>
   </div>
 
-  <div class="messages" id="messages"></div>
-
-  <div class="quick-btns">
-    <button onclick="sendQuick('How do I get insurance?')">🛡️ Insurance</button>
-    <button onclick="sendQuick('When should I start food manager training?')">🎓 Training</button>
-    <button onclick="sendQuick('What are the steps to get onboarded?')">📋 Onboarding</button>
-    <button onclick="sendQuick('What are the fees and monthly rates?')">💰 Fees & rates</button>
-    <button onclick="sendQuick('What equipment can I rent at Co-Lab?')">🔧 Equipment</button>
-    <button onclick="sendQuick('Tell me about storage options')">📦 Storage</button>
-    <button onclick="sendQuick('What are the kitchen hours and best days to book?')">🕐 Hours & booking</button>
+  <!-- Welcome / Auth Screen -->
+  <div id="welcome-screen">
+    <div class="welcome-inner">
+      <h3>Welcome to Co-Lab Support</h3>
+      <p>Enter your details below to start chatting with our permit assistance bot.</p>
+      <div class="form-group">
+        <label>Full name</label>
+        <input type="text" id="f-name" placeholder="Jane Smith" autocomplete="name"/>
+      </div>
+      <div class="form-group">
+        <label>Email address</label>
+        <input type="email" id="f-email" placeholder="jane@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Phone number</label>
+        <input type="tel" id="f-phone" placeholder="(714) 555-0100" autocomplete="tel"/>
+      </div>
+      <button id="start-btn" onclick="startChat()">Start chatting →</button>
+      <p class="form-err" id="form-err"></p>
+    </div>
   </div>
 
-  <div class="input-row">
-    <textarea id="userinput" rows="1" placeholder="Type your question…"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
-    <button id="sendbtn" onclick="sendMsg()">
-      Send <i class="ti ti-send"></i>
-    </button>
-  </div>
-
-  <div class="footer-note">
-    Can't find your answer? <a href="mailto:youssef@co-lab.com">Email Youssef</a>
+  <!-- Chat Screen -->
+  <div id="chat-screen">
+    <div class="user-badge" id="user-badge"></div>
+    <div class="messages" id="messages"></div>
+    <div class="quick-btns">
+      <button onclick="sendQuick('How do I get insurance?')">🛡️ Insurance</button>
+      <button onclick="sendQuick('When should I start food manager training?')">🎓 Training</button>
+      <button onclick="sendQuick('What are the steps to get onboarded?')">📋 Onboarding</button>
+      <button onclick="sendQuick('What are the fees and monthly rates?')">💰 Fees & rates</button>
+      <button onclick="sendQuick('What equipment can I rent at Co-Lab?')">🔧 Equipment</button>
+      <button onclick="sendQuick('Tell me about storage options')">📦 Storage</button>
+      <button onclick="sendQuick('What are the kitchen hours and best days to book?')">🕐 Hours & booking</button>
+    </div>
+    <div class="input-row">
+      <textarea id="userinput" rows="1" placeholder="Type your question…"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
+      <button id="sendbtn" onclick="sendMsg()">
+        Send <i class="ti ti-send"></i>
+      </button>
+    </div>
+    <div class="footer-note">
+      Can't find your answer? <a href="mailto:youssef@co-lab.com">Email Youssef</a>
+    </div>
   </div>
 </div>
 
 <script>
   const sessionId = 'sess_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
   const msgs = [];
+  let userData = {};
+
+  async function startChat() {
+    const name = document.getElementById('f-name').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const err = document.getElementById('form-err');
+
+    if (!name || !email || !phone) {
+      err.textContent = 'Please fill in all fields to continue.';
+      return;
+    }
+    if (!email.includes('@')) {
+      err.textContent = 'Please enter a valid email address.';
+      return;
+    }
+
+    err.textContent = '';
+    userData = { name, email, phone };
+
+    const btn = document.getElementById('start-btn');
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+
+    // Notify Co-Lab of new user
+    try {
+      await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, sessionId })
+      });
+    } catch(e) {}
+
+    // Show chat
+    document.getElementById('welcome-screen').style.display = 'none';
+    const chatScreen = document.getElementById('chat-screen');
+    chatScreen.style.display = 'flex';
+    chatScreen.style.flexDirection = 'column';
+
+    document.getElementById('user-badge').innerHTML =
+      'Chatting as <strong>' + escHtml(name) + '</strong> · ' + escHtml(email) + ' · ' + escHtml(phone);
+
+    addBubble("Hi " + name.split(' ')[0] + "! I'm the Co-Lab vendor support assistant. I can help with insurance, training, onboarding, fees, kitchen info, storage, and more. What do you need help with?", false);
+    document.getElementById('userinput').focus();
+  }
 
   function addBubble(text, isUser) {
     const wrap = document.createElement('div');
@@ -171,8 +319,6 @@
     wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
     return bubble;
   }
-
-  addBubble("Hi! I'm the Co-Lab vendor support assistant. I can help with insurance, training, onboarding, fees, kitchen info, storage, and more. What do you need help with?", false);
 
   async function sendMsg() {
     const input = document.getElementById('userinput');
@@ -192,7 +338,7 @@
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: msgs, sessionId })
+        body: JSON.stringify({ messages: msgs, sessionId, userData })
       });
       const data = await res.json();
       const reply = data.reply || "Sorry, I couldn't get a response. Please email youssef@co-lab.com.";
@@ -211,6 +357,10 @@
   function sendQuick(q) {
     document.getElementById('userinput').value = q;
     sendMsg();
+  }
+
+  function escHtml(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 </script>
 </body>
