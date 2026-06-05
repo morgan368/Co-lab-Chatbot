@@ -130,7 +130,7 @@ export default async function handler(req, res) {
 
     // Build system prompt with user context
     const systemWithUser = userData?.name
-      ? `${SYSTEM_PROMPT}\n\nCURRENT USER: ${userData.name} (${userData.email}, ${userData.phone}). Address them by first name.`
+      ? `{SYSTEM_PROMPT}\n\nCURRENT USER: ${userData.name} (${userData.email}, ${userData.phone}). Address them by first name.`
       : SYSTEM_PROMPT;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
