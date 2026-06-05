@@ -250,7 +250,7 @@
       </button>
     </div>
     <div class="footer-note">
-      Can't find your answer? <a href="mailto:youssef@co-lab.com">Email Youssef</a>
+      Can't find your answer? <a href="mailto:morgan@co-lab.online">Email Morgan</a>
     </div>
   </div>
 </div>
@@ -341,12 +341,12 @@
         body: JSON.stringify({ messages: msgs, sessionId, userData })
       });
       const data = await res.json();
-      const reply = data.reply || "Sorry, I couldn't get a response. Please email youssef@co-lab.com.";
+      const reply = data.reply || "Sorry, I couldn't get a response. Please Email Morgan@co-lab.com.";
       thinking.textContent = reply;
       thinking.classList.remove('typing');
       msgs.push({ role: 'assistant', content: reply });
     } catch (e) {
-      thinking.textContent = "Something went wrong. Please email youssef@co-lab.com for help.";
+      thinking.textContent = "Something went wrong. Please Email Morgan@co-lab.com for help.";
       thinking.classList.remove('typing');
     }
 
