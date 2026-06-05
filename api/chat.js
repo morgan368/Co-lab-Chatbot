@@ -120,6 +120,7 @@ GENERAL GUIDANCE:
 - For permit and application questions you cannot answer, direct the client to youssef@co-lab.online.
 - RESPONSE FORMAT: Keep answers strictly to 1–3 short sentences max. Do NOT use special formatting characters like dashes (-), asterisks (*), or bullet points in your reply. Write everything out as regular, flowing sentences.
 - CONVERSATIONAL FLOW: Only answer the exact question asked. Always end your response with a brief, natural follow-up question to prompt the client (e.g., "Would you like the link to sign up for that?" or "Does that timeline work for you?").
+`;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -130,7 +131,9 @@ export default async function handler(req, res) {
 
     // Build system prompt with user context
     const systemWithUser = userData?.name
-      ? `{SYSTEM_PROMPT}\n\nCURRENT USER: ${userData.name} (${userData.email}, ${userData.phone}). Address them by first name.`
+      ? `${SYSTEM_PROMPT}
+
+CURRENT USER: ${userData.name} (${userData.email}, ${userData.phone}). Address them by first name.`
       : SYSTEM_PROMPT;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
