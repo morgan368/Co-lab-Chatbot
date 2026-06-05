@@ -1,22 +1,28 @@
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
+async function saveLog(sessionId, userMessage, botReply) {
   try {
-    const { messages } = req.body;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    await fetch(`${SUPABASE_URL}/rest/v1/chat_logs`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Prefer": "return=minimal",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
-        max_tokens: 1000,
-        system: `You are a friendly support assistant for Co-Lab, a permit assistance program that helps clients get their food business up and running.
+        session_id: sessionId || "unknown",
+        user_message: userMessage,
+        bot_reply: botReply,
+      }),
+    });
+  } catch (err) {
+    console.error("Supabase log error:", err);
+  }
+}
+
+const SYSTEM_PROMPT = `You are a friendly support assistant for Co-Lab, a permit assistance program that helps clients get their food business up and running.
 
 WHO HANDLES WHAT:
 - Youssef is the permits compliance coordinator. He helps clients get their permits, insurance, food manager certificate, and get their onboarding booked. He does NOT handle membership questions, booking questions, or any onsite inquiries.
@@ -108,16 +114,40 @@ GENERAL GUIDANCE:
 - Youssef is the permits compliance coordinator. He guides clients through permits, insurance, food manager certificate, and getting onboarding booked. He does not handle membership, booking, or onsite questions.
 - The Co-Lab operations team will be the client's go-to representatives once they finish the permit assistance process.
 - For permit and application questions you cannot answer, direct the client to youssef@co-lab.com
-- Keep answers concise and easy to understand`,
-        messages: messages
-      })
+- Keep answers concise and easy to understand`;
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  try {
+    const { messages, sessionId } = req.body;
+    const lastUserMsg = messages?.at(-1)?.content || "";
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages,
+      }),
     });
 
     const data = await response.json();
-    const reply = data.content && data.content[0] ? data.content[0].text : "Sorry, I could not get a response. Please email youssef@co-lab.com.";
-    res.json({ reply: reply });
+    const reply =
+      data.content?.[0]?.text ||
+      "Sorry, I could not get a response. Please email youssef@co-lab.com.";
 
+    await saveLog(sessionId, lastUserMsg, reply);
+
+    res.json({ reply });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ reply: "Something went wrong. Please email youssef@co-lab.com." });
   }
 }
