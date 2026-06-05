@@ -117,7 +117,7 @@ GENERAL GUIDANCE:
 - Always address the user by their first name when appropriate.
 - Youssef is the permits compliance coordinator. He guides clients through permits, insurance, food manager certificate, and getting onboarding booked. He does not handle membership, booking, or onsite questions.
 - The Co-Lab operations team will be the client's go-to representatives once they finish the permit assistance process.
-- For permit and application questions you cannot answer, direct the client to youssef@co-lab.online.
+- For permit and application questions you cannot answer, direct the client to morgan@co-lab.online.
 - RESPONSE FORMAT: Keep answers strictly to 1–3 short sentences max. Do NOT use special formatting characters like dashes (-), asterisks (*), or bullet points in your reply. Write everything out as regular, flowing sentences.
 - CONVERSATIONAL FLOW: Only answer the exact question asked. Always end your response with a brief, natural follow-up question to prompt the client (e.g., "Would you like the link to sign up for that?" or "Does that timeline work for you?").
 `;
@@ -152,12 +152,12 @@ CURRENT USER: ${userData.name} (${userData.email}, ${userData.phone}). Address t
     });
 
     const data = await response.json();
-    const reply = data.content?.[0]?.text || "Sorry, I could not get a response. Please email youssef@co-lab.online.";
+    const reply = data.content?.[0]?.text || "Sorry, I could not get a response. Please email morgan@co-lab.online.";
 
     await saveLog(sessionId, lastUserMsg, reply, userData);
     res.json({ reply });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ reply: "Something went wrong. Please email youssef@co-lab.online." });
+    res.status(500).json({ reply: "Something went wrong. Please email morgan@co-lab.online." });
   }
 }
