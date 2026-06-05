@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Co-Lab Chat Logs</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f4f0; min-height: 100vh; padding: 2rem 1rem;
+    }
+    .container { max-width: 860px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .subtitle { color: #666; font-size: 0.85rem; margin-bottom: 1.5rem; }
+    .login-card {
+      background: #fff; border-radius: 12px; padding: 2rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07); max-width: 380px;
+    }
+    .login-card h2 { font-size: 1rem; margin-bottom: 1rem; }
+    .input-group { display: flex; gap: 0.5rem; }
+    input[type="password"] {
+      flex: 1; border: 1.5px solid #e0e0e0; border-radius: 8px;
+      padding: 0.55rem 0.8rem; font-size: 0.88rem; outline: none;
+    }
+    input[type="password"]:focus { border-color: #1a1a1a; }
+    button {
+      background: #1a1a1a; color: #e8ff47; border: none;
+      border-radius: 8px; padding: 0.55rem 1rem;
+      font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    }
+    button:hover { opacity: 0.85; }
+    .error { color: #dc2626; font-size: 0.82rem; margin-top: 0.5rem; }
+    #logs-section { display: none; }
+    .stats { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .stat-card {
+      background: #fff; border-radius: 10px; padding: 0.9rem 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex: 1; min-width: 140px;
+    }
+    .stat-card .num { font-size: 1.6rem; font-weight: 700; }
+    .stat-card .label { font-size: 0.75rem; color: #666; margin-top: 2px; }
+    .filter-bar {
+      background: #fff; border-radius: 10px; padding: 0.75rem 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1rem;
+      display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
+    }
+    .filter-bar input[type="text"] {
+      border: 1.5px solid #e0e0e0; border-radius: 8px;
+      padding: 0.45rem 0.75rem; font-size: 0.83rem; outline: none; flex: 1;
+    }
+    .filter-bar input:focus { border-color: #1a1a1a; }
+    .filter-bar label { font-size: 0.82rem; color: #555; white-space: nowrap; }
+    .refresh-btn { background: #f4f4f0; color: #333; font-weight: 500; padding: 0.45rem 0.9rem; font-size: 0.82rem; }
+    .log-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .log-card {
+      background: #fff; border-radius: 10px; padding: 1rem 1.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .log-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.4rem;
+    }
+    .log-meta .time { font-size: 0.75rem; color: #888; }
+    .log-meta .session {
+      font-size: 0.72rem; background: #f4f4f0; color: #555;
+      padding: 2px 8px; border-radius: 20px; font-family: monospace;
+    }
+    .log-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.84rem; }
+    .log-row:last-child { margin-bottom: 0; }
+    .log-label { font-weight: 600; min-width: 34px; font-size: 0.75rem; padding-top: 2px; color: #888; }
+    .log-label.user-lbl { color: #6366f1; }
+    .log-label.bot-lbl { color: #059669; }
+    .log-text { color: #222; line-height: 1.5; flex: 1; }
+    .empty { text-align: center; padding: 3rem; color: #aaa; font-size: 0.9rem; }
+    .note { font-size: 0.75rem; color: #aaa; margin-top: 1rem; text-align: center; }
+    .badge-live {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: #d1fae5; color: #065f46; font-size: 0.72rem;
+      padding: 2px 8px; border-radius: 20px; font-weight: 600;
+      margin-left: 0.5rem;
+    }
+    .badge-live span { width: 6px; height: 6px; background: #10b981; border-radius: 50%; display: inline-block; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Co-Lab Chat Logs <span class="badge-live"><span></span> Supabase</span></h1>
+  <p class="subtitle">Every conversation is permanently saved — logs survive server restarts</p>
+
+  <div id="login-section">
+    <div class="login-card">
+      <h2>🔒 Enter admin password</h2>
+      <div class="input-group">
+        <input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')loadLogs()"/>
+        <button onclick="loadLogs()">View Logs</button>
+      </div>
+      <p class="error" id="login-err"></p>
+    </div>
+  </div>
+
+  <div id="logs-section">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="num" id="stat-total">—</div>
+        <div class="label">Total messages</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="stat-sessions">—</div>
+        <div class="label">Unique sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="stat-today">—</div>
+        <div class="label">Messages today</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" id="search" placeholder="🔍  Search messages…" oninput="renderLogs()"/>
+      <label><input type="checkbox" id="today-only" onchange="renderLogs()"/> Today only</label>
+      <button class="refresh-btn" onclick="loadLogs()">↻ Refresh</button>
+    </div>
+
+    <div class="log-list" id="log-list"></div>
+    <p class="note">Logs are stored permanently in Supabase. Showing the most recent 500 messages.</p>
+  </div>
+</div>
+
+<script>
+  let allLogs = [];
+  let currentPwd = '';
+
+  async function loadLogs() {
+    const pwd = document.getElementById('pwd')?.value || currentPwd;
+    currentPwd = pwd;
+    document.getElementById('login-err').textContent = '';
+
+    const res = await fetch(`/api/logs?password=${encodeURIComponent(pwd)}`);
+    if (res.status === 401) {
+      document.getElementById('login-err').textContent = 'Incorrect password.';
+      return;
+    }
+
+    const data = await res.json();
+    allLogs = data.logs || [];
+
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('logs-section').style.display = 'block';
+
+    const sessions = new Set(allLogs.map(l => l.session_id)).size;
+    const today = new Date().toDateString();
+    const todayCount = allLogs.filter(l => new Date(l.created_at).toDateString() === today).length;
+    document.getElementById('stat-total').textContent = allLogs.length;
+    document.getElementById('stat-sessions').textContent = sessions;
+    document.getElementById('stat-today').textContent = todayCount;
+
+    renderLogs();
+  }
+
+  function renderLogs() {
+    const query = document.getElementById('search').value.toLowerCase();
+    const todayOnly = document.getElementById('today-only').checked;
+    const today = new Date().toDateString();
+
+    let filtered = allLogs.filter(l => {
+      if (todayOnly && new Date(l.created_at).toDateString() !== today) return false;
+      if (query && !l.user_message?.toLowerCase().includes(query) && !l.bot_reply?.toLowerCase().includes(query)) return false;
+      return true;
+    });
+
+    const container = document.getElementById('log-list');
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty">No messages found.</div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(l => {
+      const d = new Date(l.created_at);
+      const time = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      return `
+        <div class="log-card">
+          <div class="log-meta">
+            <span class="time">${time}</span>
+            <span class="session">${l.session_id || '—'}</span>
+          </div>
+          <div class="log-row">
+            <span class="log-label user-lbl">User</span>
+            <span class="log-text">${esc(l.user_message)}</span>
+          </div>
+          <div class="log-row">
+            <span class="log-label bot-lbl">Bot</span>
+            <span class="log-text">${esc(l.bot_reply)}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function esc(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>
