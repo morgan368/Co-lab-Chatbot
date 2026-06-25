@@ -3,80 +3,80 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 // ── Supabase REST helper ──────────────────────────────────────────────────────
 async function supabaseGet(table, params) {
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-          headers: {
-                  apikey: SUPABASE_KEY,
-                  Authorization: `Bearer ${SUPABASE_KEY}`,
-                  Accept: "application/json",
-          },
-    });
-    if (!res.ok) return null;
-    const rows = await res.json();
-    return Array.isArray(rows) ? rows[0] || null : null;
+        const query = new URLSearchParams(params).toString();
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+                    headers: {
+                                    apikey: SUPABASE_KEY,
+                                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                                    Accept: "application/json",
+                    },
+        });
+        if (!res.ok) return null;
+        const rows = await res.json();
+        return Array.isArray(rows) ? rows[0] || null : null;
 }
 
 // ── Save chat log ─────────────────────────────────────────────────────────────
 async function saveLog(sessionId, userMessage, botReply, userData) {
-    try {
-          await fetch(`${SUPABASE_URL}/rest/v1/chat_logs`, {
-                  method: "POST",
-                  headers: {
-                            "Content-Type": "application/json",
-                            apikey: SUPABASE_KEY,
-                            Authorization: `Bearer ${SUPABASE_KEY}`,
-                            Prefer: "return=minimal",
-                  },
-                  body: JSON.stringify({
-                            session_id: sessionId || "unknown",
-                            user_message: userMessage,
-                            bot_reply: botReply,
-                            user_name: userData?.name || null,
-                            user_email: userData?.email || null,
-                            user_phone: userData?.phone || null,
-                  }),
-          });
-    } catch (err) {
-          console.error("Supabase log error:", err);
-    }
+        try {
+                    await fetch(`${SUPABASE_URL}/rest/v1/chat_logs`, {
+                                    method: "POST",
+                                    headers: {
+                                                        "Content-Type": "application/json",
+                                                        apikey: SUPABASE_KEY,
+                                                        Authorization: `Bearer ${SUPABASE_KEY}`,
+                                                        Prefer: "return=minimal",
+                                    },
+                                    body: JSON.stringify({
+                                                        session_id: sessionId || "unknown",
+                                                        user_message: userMessage,
+                                                        bot_reply: botReply,
+                                                        user_name: userData?.name || null,
+                                                        user_email: userData?.email || null,
+                                                        user_phone: userData?.phone || null,
+                                    }),
+                    });
+        } catch (err) {
+                    console.error("Supabase log error:", err);
+        }
 }
 
 // ── Look up client stage by email ─────────────────────────────────────────────
 async function getClientStage(email) {
-    if (!email) return null;
-    try {
-          return await supabaseGet("clients", {
-                  email: `eq.${email.toLowerCase().trim()}`,
-                  select: "email,name,phone,health_permit_status,insurance_status,food_manager_status,stage,notes",
-                  limit: 1,
-          });
-    } catch (err) {
-          console.error("Client lookup error:", err);
-          return null;
-    }
+        if (!email) return null;
+        try {
+                    return await supabaseGet("clients", {
+                                    email: `eq.${email.toLowerCase().trim()}`,
+                                    select: "email,name,phone,health_permit_status,insurance_status,food_manager_status,stage,notes",
+                                    limit: 1,
+                    });
+        } catch (err) {
+                    console.error("Client lookup error:", err);
+                    return null;
+        }
 }
 
 // ── Status label helper ───────────────────────────────────────────────────────
 function statusLabel(val) {
-    return (
-      {
-              not_started: "not started yet",
-              in_progress: "in progress",
-              approved: "approved ✓",
-              completed: "completed ✓",
-      }[val] ?? val ?? "unknown"
-        );
+        return (
+            {
+                            not_started: "not started yet",
+                            in_progress: "in progress",
+                            approved: "approved ✓",
+                            completed: "completed ✓",
+            }[val] ?? val ?? "unknown"
+                );
 }
 
 function stageLabel(val) {
-    return (
-      {
-              pre_onboarding: "Pre-Onboarding (still completing requirements)",
-              ready_for_onboarding: "Ready for Onboarding — all three requirements are done, awaiting scheduling",
-              onboarding_scheduled: "Onboarding Scheduled",
-              active: "Active Member",
-      }[val] ?? val ?? "unknown"
-        );
+        return (
+            {
+                            pre_onboarding: "Pre-Onboarding (still completing requirements)",
+                            ready_for_onboarding: "Ready for Onboarding — all three requirements are done, awaiting scheduling",
+                            onboarding_scheduled: "Onboarding Scheduled",
+                            active: "Active Member",
+            }[val] ?? val ?? "unknown"
+                );
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
@@ -154,7 +154,11 @@ MAIL AND ADDRESS:
 - Produce and meat deliveries can be sent to Co-Lab
 - Co-Lab will not receive product on the client's behalf, but delivery drivers can go directly to the client's storage area
 GENERAL GUIDANCE:
-- Always be warm, friendly, and clear many clients are first-time food business owners.
+- Keep responses short and conversational — 2 to 4 sentences max unless the question genuinely requires more detail. If there are multiple steps or items, use a brief list but keep each point tight.
+- Write like a real person, not a formal document. Use natural, everyday language. Contractions are great (you're, don't, we'll). Avoid corporate-speak.
+- Never use bold text or markdown formatting. No asterisks, no headers — just plain, friendly sentences.
+- Lead with the most useful info first. Cut anything that doesn't directly help the client.
+- Always be warm and approachable — many clients are first-time food business owners and may feel overwhelmed.
 - Always address the user by their first name when appropriate.
 - Youssef is the permits compliance coordinator. He guides clients through permits, insurance, food manager certificate, and getting onboarding booked. He does not handle membership, booking, or onsite questions.
 - The Co-Lab operations team will be the client's go-to representatives once they finish the permit assistance process.
@@ -162,68 +166,68 @@ GENERAL GUIDANCE:
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
-    if (req.method !== "POST") {
-          return res.status(405).json({ error: "Method not allowed" });
+        if (req.method !== "POST") {
+                    return res.status(405).json({ error: "Method not allowed" });
+        }
+
+    const { messages, sessionId, userData } = req.body;
+        const { name, email, phone } = userData || {};
+
+    // Look up this client's current stage from the clients table
+    const client = await getClientStage(email);
+
+    let stageContext = "";
+        if (client) {
+                    stageContext = `
+
+                    VERIFIED CLIENT STATUS — pulled from our records by email. Do NOT ask whether they have started. Open by telling them exactly where they are and what their next step is.
+
+                    Current stage: ${stageLabel(client.stage)}
+                    - Orange County Health Permit: ${statusLabel(client.health_permit_status)}
+                    - General Liability Insurance: ${statusLabel(client.insurance_status)}
+                    - Food Manager Certificate: ${statusLabel(client.food_manager_status)}
+                    ${client.notes ? `- Internal notes: ${client.notes}` : ""}
+
+                    Use this information to lead with where the client stands and give them one clear, specific next action. If all three requirements are approved/completed, let them know they are ready and that the Co-Lab team will be in touch to schedule onboarding.`;
+        } else if (email) {
+                    stageContext = `
+
+                    This client (${email}) is not yet in our system — they are likely a new inquiry or have not yet started the process. Ask them where they are in the process and encourage them to reach out to youssef@co-lab.online to get set up.`;
+        }
+
+    const systemPrompt = `You are chatting with: ${name || "a client"} (email: ${email || "unknown"}, phone: ${phone || "not provided"}).
+    ${stageContext}
+
+    ${BASE_PROMPT}`;
+
+    try {
+                const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
+                                method: "POST",
+                                headers: {
+                                                    "Content-Type": "application/json",
+                                                    "x-api-key": process.env.ANTHROPIC_API_KEY,
+                                                    "anthropic-version": "2023-06-01",
+                                },
+                                body: JSON.stringify({
+                                                    model: "claude-opus-4-5",
+                                                    max_tokens: 1024,
+                                                    system: systemPrompt,
+                                                    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+                                }),
+                });
+
+            const data = await apiRes.json();
+                const reply = data?.content?.[0]?.text || "Sorry, I couldn't generate a response. Please email morgan@co-lab.online for help.";
+
+            // Save log non-blocking
+            const lastUser = [...messages].reverse().find((m) => m.role === "user");
+                saveLog(sessionId, lastUser?.content ?? "", reply, userData);
+
+            return res.json({ reply });
+    } catch (err) {
+                console.error("API error:", err);
+                return res.status(500).json({
+                                reply: "Sorry, I'm having trouble responding right now. Please email morgan@co-lab.online for immediate help.",
+                });
     }
-
-  const { messages, sessionId, userData } = req.body;
-    const { name, email, phone } = userData || {};
-
-  // Look up this client's current stage from the clients table
-  const client = await getClientStage(email);
-
-  let stageContext = "";
-    if (client) {
-          stageContext = `
-
-          VERIFIED CLIENT STATUS — pulled from our records by email. Do NOT ask whether they have started. Open by telling them exactly where they are and what their next step is.
-
-          Current stage: ${stageLabel(client.stage)}
-          - Orange County Health Permit: ${statusLabel(client.health_permit_status)}
-          - General Liability Insurance: ${statusLabel(client.insurance_status)}
-          - Food Manager Certificate: ${statusLabel(client.food_manager_status)}
-          ${client.notes ? `- Internal notes: ${client.notes}` : ""}
-
-          Use this information to lead with where the client stands and give them one clear, specific next action. If all three requirements are approved/completed, let them know they are ready and that the Co-Lab team will be in touch to schedule onboarding.`;
-    } else if (email) {
-          stageContext = `
-
-          This client (${email}) is not yet in our system — they are likely a new inquiry or have not yet started the process. Ask them where they are in the process and encourage them to reach out to youssef@co-lab.online to get set up.`;
-    }
-
-  const systemPrompt = `You are chatting with: ${name || "a client"} (email: ${email || "unknown"}, phone: ${phone || "not provided"}).
-  ${stageContext}
-
-  ${BASE_PROMPT}`;
-
-  try {
-        const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                          "Content-Type": "application/json",
-                          "x-api-key": process.env.ANTHROPIC_API_KEY,
-                          "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify({
-                          model: "claude-opus-4-5",
-                          max_tokens: 1024,
-                          system: systemPrompt,
-                          messages: messages.map((m) => ({ role: m.role, content: m.content })),
-                }),
-        });
-
-      const data = await apiRes.json();
-        const reply = data?.content?.[0]?.text || "Sorry, I couldn't generate a response. Please email morgan@co-lab.online for help.";
-
-      // Save log non-blocking
-      const lastUser = [...messages].reverse().find((m) => m.role === "user");
-        saveLog(sessionId, lastUser?.content ?? "", reply, userData);
-
-      return res.json({ reply });
-  } catch (err) {
-        console.error("API error:", err);
-        return res.status(500).json({
-                reply: "Sorry, I'm having trouble responding right now. Please email morgan@co-lab.online for immediate help.",
-        });
-  }
 }
