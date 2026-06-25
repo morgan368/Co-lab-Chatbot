@@ -3,231 +3,229 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 // ── Supabase REST helper ──────────────────────────────────────────────────────
 async function supabaseGet(table, params) {
-        const query = new URLSearchParams(params).toString();
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-                    headers: {
-                                    apikey: SUPABASE_KEY,
-                                    Authorization: `Bearer ${SUPABASE_KEY}`,
-                                    Accept: "application/json",
-                    },
-        });
-        if (!res.ok) return null;
-        const rows = await res.json();
-        return Array.isArray(rows) ? rows[0] || null : null;
+            const query = new URLSearchParams(params).toString();
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+                            headers: {
+                                                apikey: SUPABASE_KEY,
+                                                Authorization: `Bearer ${SUPABASE_KEY}`,
+                                                Accept: "application/json",
+                            },
+            });
+            if (!res.ok) return null;
+            const rows = await res.json();
+            return Array.isArray(rows) ? rows[0] || null : null;
 }
 
 // ── Save chat log ─────────────────────────────────────────────────────────────
 async function saveLog(sessionId, userMessage, botReply, userData) {
-        try {
-                    await fetch(`${SUPABASE_URL}/rest/v1/chat_logs`, {
-                                    method: "POST",
-                                    headers: {
-                                                        "Content-Type": "application/json",
-                                                        apikey: SUPABASE_KEY,
-                                                        Authorization: `Bearer ${SUPABASE_KEY}`,
-                                                        Prefer: "return=minimal",
-                                    },
-                                    body: JSON.stringify({
-                                                        session_id: sessionId || "unknown",
-                                                        user_message: userMessage,
-                                                        bot_reply: botReply,
-                                                        user_name: userData?.name || null,
-                                                        user_email: userData?.email || null,
-                                                        user_phone: userData?.phone || null,
-                                    }),
-                    });
-        } catch (err) {
-                    console.error("Supabase log error:", err);
-        }
+            try {
+                            await fetch(`${SUPABASE_URL}/rest/v1/chat_logs`, {
+                                                method: "POST",
+                                                headers: {
+                                                                        "Content-Type": "application/json",
+                                                                        apikey: SUPABASE_KEY,
+                                                                        Authorization: `Bearer ${SUPABASE_KEY}`,
+                                                                        Prefer: "return=minimal",
+                                                },
+                                                body: JSON.stringify({
+                                                                        session_id: sessionId || "unknown",
+                                                                        user_message: userMessage,
+                                                                        bot_reply: botReply,
+                                                                        user_name: userData?.name || null,
+                                                                        user_email: userData?.email || null,
+                                                                        user_phone: userData?.phone || null,
+                                                }),
+                            });
+            } catch (err) {
+                            console.error("Supabase log error:", err);
+            }
 }
 
 // ── Look up client stage by email ─────────────────────────────────────────────
 async function getClientStage(email) {
-        if (!email) return null;
-        try {
-                    return await supabaseGet("clients", {
-                                    email: `eq.${email.toLowerCase().trim()}`,
-                                    select: "email,name,phone,health_permit_status,insurance_status,food_manager_status,stage,notes",
-                                    limit: 1,
-                    });
-        } catch (err) {
-                    console.error("Client lookup error:", err);
-                    return null;
-        }
+            if (!email) return null;
+            try {
+                            return await supabaseGet("clients", {
+                                                email: `eq.${email.toLowerCase().trim()}`,
+                                                select: "email,name,phone,health_permit_status,insurance_status,food_manager_status,stage,notes",
+                                                limit: 1,
+                            });
+            } catch (err) {
+                            console.error("Client lookup error:", err);
+                            return null;
+            }
 }
 
 // ── Status label helper ───────────────────────────────────────────────────────
 function statusLabel(val) {
-        return (
-            {
-                            not_started: "not started yet",
-                            in_progress: "in progress",
-                            approved: "approved ✓",
-                            completed: "completed ✓",
-            }[val] ?? val ?? "unknown"
-                );
+            return (
+                    {
+                                        not_started: "not started yet",
+                                        in_progress: "in progress",
+                                        approved: "approved",
+                                        completed: "done",
+                    }[val] ?? val ?? "unknown"
+                        );
 }
 
 function stageLabel(val) {
-        return (
-            {
-                            pre_onboarding: "Pre-Onboarding (still completing requirements)",
-                            ready_for_onboarding: "Ready for Onboarding — all three requirements are done, awaiting scheduling",
-                            onboarding_scheduled: "Onboarding Scheduled",
-                            active: "Active Member",
-            }[val] ?? val ?? "unknown"
-                );
+            return (
+                    {
+                                        pre_onboarding: "Pre-Onboarding (still completing requirements)",
+                                        ready_for_onboarding: "Ready for Onboarding",
+                                        onboarding_scheduled: "Onboarding Scheduled",
+                                        active: "Active Member",
+                    }[val] ?? val ?? "unknown"
+                        );
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
-const BASE_PROMPT = `You are a friendly support assistant for Co-Lab, a permit assistance program that helps clients get their food business up and running.
+const BASE_PROMPT = `You are a support assistant for Co-Lab, a shared kitchen and permit assistance program for food businesses.
+
 WHO HANDLES WHAT:
-- Youssef is the permits compliance coordinator. He helps clients get their permits, insurance, food manager certificate, and get their onboarding booked. He does NOT handle membership questions, booking questions, or any onsite inquiries.
-- The Co-Lab operations team are the go-to representatives for everything once the client finishes the permit assistance process. During onboarding, clients will meet the operations team who will support them from that point forward.
-- For questions about storage, membership fees, equipment, kitchen booking, and onsite topics, always end your answer by saying: "Once you are onboarded, you will get hands-on support from our operations team regarding these specific questions."
-- For questions outside your knowledge that relate to permits, insurance, or the application process, direct the client to youssef@co-lab.online.
+- Youssef is the permits compliance coordinator. He handles permits, insurance, food manager cert, and booking onboarding. Not membership, billing, or onsite stuff.
+- The Co-Lab operations team takes over once a client is onboarded — they handle scheduling, billing, storage questions, all that.
+- For storage, fees, equipment, and booking questions, answer what you can and add: "Once you're onboarded, the operations team will walk you through all of this in person."
+- For permit/insurance stuff you can't answer, point them to youssef@co-lab.online.
+
 ONBOARDING:
-- Onboarding happens AFTER the client has completed all three requirements: full approved permit, food manager certificate, and general liability insurance
-- Once all three are complete, the Co-Lab team will reach out to get the client scheduled clients do not need to worry about scheduling it themselves
-- Onboarding is in person and takes about one hour
-- It is required to be in person the client needs to pick up their keys, see their storage, and be prepared for a health department inspection
-- During onboarding the Co-Lab team shows the client their storage, how to book kitchen time, how to use chemicals, where the trash is, and more
-- Onboarding is also the time to meet the operations team, who handle all booking and billing needs going forward
-- There is a refundable onboarding deposit of $250
+- Requires all three: approved health permit, food manager certificate, and general liability insurance
+- Once all three are done, Co-Lab reaches out to schedule — the client doesn't have to do anything
+- It's in person, takes about an hour
+- They pick up keys, see their storage, learn how to book kitchen time, meet the operations team
+- There's a refundable $250 deposit
+
 HEALTH DEPARTMENT INSPECTION:
-- After onboarding, Co-Lab helps the client schedule their inspection with the health department
-- Part of onboarding is preparing the client to pass showing them how to use chemicals, where the trash is, and what the health department will look for
+- Happens after onboarding — Co-Lab helps schedule it
+- Onboarding prep includes learning chemical use, trash location, what inspectors look for
+
 ORANGE COUNTY HEALTH PERMIT:
-- The total cost of the Orange County health permit is $850 for the first year
-- The first payment is $345, which is the application review fee due when the permit application is dropped off at the health department
-- After 22 days, the remaining balance of $504 is due
-- If the client renews their permit, they do not need to pay the $345 application review fee again
-- Co-Lab helps clients through this entire process as part of the permit assistance program
+- Total cost: $850 for year one
+- First payment: $345 application review fee, due when dropping off the application
+- After 22 days: remaining $504 due
+- Renewals don't need the $345 again
+- Co-Lab guides clients through the whole thing
+
 TFF PERMIT:
-- The TFF (Temporary Food Facility) permit is a separate permit sometimes required to sell at public markets
-- It is temporary and separate from the Orange County health permit
-- Co-Lab can help clients navigate the TFF process, but it does not fall under the permit assistance program
+- Separate from the OC health permit, needed for some public markets
+- Co-Lab can help navigate it but it's not part of the permit assistance program
+
 INSURANCE:
-- Clients need general liability insurance before they can complete onboarding
-- The minimum cost is $25/month through Flip insurance
-- To get enrolled, clients should check their first email from the Co-Lab permit rep it contains a link to the Flip insurance page to get signed up
-- Clients can add more coverage if they want
+- General liability required before onboarding
+- Minimum $25/month through Flip insurance
+- Link is in the first email from the Co-Lab permit rep
+
 FOOD MANAGER CERTIFICATE:
-- Clients should start training as soon as possible
-- The course takes at least 8 hours to complete
-- Once completed, the certificate is valid for 5 years
-- Only one person in the business is required to have the food manager certificate
-- Anyone helping in the kitchen is recommended to also get their food handlers certificate
-- Co-Lab only helps clients obtain the food manager certificate
-- The health department will do regular inspections and will ask to see the food manager certificate
-- Co-Lab keeps a copy of the food manager certificate on site for the client
+- Start ASAP — course is at least 8 hours
+- Valid for 5 years once done
+- Only one person per business needs it
+- Anyone else helping in the kitchen should get the food handlers cert
+- Co-Lab keeps a copy on site
+
 MEMBERSHIP FEES:
-- The minimum monthly rate is $600 per month
-- That includes 6 to 12 hours of kitchen time, depending on which kitchen the client cooks in
-- It also includes one shelf each of cold, dry, and freezer storage
-- Once you are onboarded, you will get hands-on support from our operations team regarding these specific questions
+- Starts at $600/month
+- Includes 6-12 hours of kitchen time (depends on the kitchen) and one shelf each of cold, dry, and freezer storage
+- Operations team handles specifics after onboarding
+
 STORAGE:
-- Storage shelves are the client's for the entire duration of their membership
-- Additional shelves beyond what is included are $60 per shelf per month
-- Once you are onboarded, you will get hands-on support from our operations team regarding these specific questions
+- Your shelves are yours for the whole membership
+- Extra shelves are $60/shelf/month
+- Operations team handles specifics after onboarding
+
 KITCHEN HOURS AND BOOKING:
-- During onboarding, clients will be shown how to book kitchen hours and how to request a schedule
-- Clients can request time up to 2 months in advance, which helps with production planning
-- The busiest day is currently Thursday prime time hours are 7am to 9pm
-- The slowest day is Sunday the most open slots are generally 9pm to 7am
-- For specific questions about kitchen scheduling and booking, please wait until onboarding so you can speak directly with the operations team
-- Once you are onboarded, you will get hands-on support from our operations team regarding these specific questions
+- Covered during onboarding
+- Can book up to 2 months out
+- Busiest: Thursday 7am-9pm. Most open: Sunday 9pm-7am
+- Operations team handles specifics after onboarding
+
 ADDING MENU ITEMS:
-- Menu items can be added after the permit is approved
-- Clients do not need to inform the health department, since the food is already in alignment with what they are approved to cook
-- Menus change often and this is completely normal
+- No need to notify the health department — just add them
+- Menus change all the time, totally normal
+
 EQUIPMENT:
-- Clients can bring their own equipment to use at Co-Lab
-- Large equipment must be commercial grade or NSF certified
-- Equipment cannot require fitting under a ventilation hood
-- Small wares such as bowls and small items do not need to be NSF certified
-- Co-Lab also has equipment available to rent: 20qt and 30qt mixers, food processor, immersion blender, Vitamix, and equipment racks with trays
-- Once you are onboarded, you will get hands-on support from our operations team regarding these specific questions
+- Bring your own — large equipment must be commercial grade or NSF certified, no hood equipment
+- Small wares don't need certification
+- Rentals available: 20qt and 30qt mixers, food processor, immersion blender, Vitamix, racks with trays
+- Operations team handles specifics after onboarding
+
 MAIL AND ADDRESS:
-- Co-Lab's address is 201 East 4th Street Santa Ana
-- Clients can set up their business address at the 4th Street Market location
-- Produce and meat deliveries can be sent to Co-Lab
-- Co-Lab will not receive product on the client's behalf, but delivery drivers can go directly to the client's storage area
-GENERAL GUIDANCE:
-- Keep responses short and conversational — 2 to 4 sentences max unless the question genuinely requires more detail. If there are multiple steps or items, use a brief list but keep each point tight.
-- Write like a real person, not a formal document. Use natural, everyday language. Contractions are great (you're, don't, we'll). Avoid corporate-speak.
-- Never use bold text or markdown formatting. No asterisks, no headers — just plain, friendly sentences.
-- Lead with the most useful info first. Cut anything that doesn't directly help the client.
-- Always be warm and approachable — many clients are first-time food business owners and may feel overwhelmed.
-- Always address the user by their first name when appropriate.
-- Youssef is the permits compliance coordinator. He guides clients through permits, insurance, food manager certificate, and getting onboarding booked. He does not handle membership, booking, or onsite questions.
-- The Co-Lab operations team will be the client's go-to representatives once they finish the permit assistance process.
-- For permit and application questions you cannot answer, direct the client to morgan@co-lab.online.`;
+- 201 East 4th Street, Santa Ana
+- Clients can use this as their business address
+- Produce and meat deliveries can come here — drivers go directly to the client's storage area (Co-Lab won't receive on the client's behalf)
+
+TONE — read this carefully, it matters most:
+You're not a bot. You're a real person who knows Co-Lab inside and out and genuinely wants to help. Write like you're texting a friend who just asked you a quick question.
+
+- Short. 2-3 sentences almost always. Only longer if it's genuinely complex.
+- Casual. Use contractions. Start with "So", "Yeah", "Just", "Honestly" when it fits. Don't be stiff.
+- Warm but not over the top. You care, but you're not a cheerleader.
+- No formatting whatsoever. No bullets, no bold, no asterisks. Just plain sentences.
+- Don't repeat what they said. Just answer.
+- Don't over-explain simple things.
+- Use their first name occasionally — not every time, just when it feels natural.
+- If something's outside your lane, just say so casually: "That's more of a Youssef thing" or "The ops team will sort that out once you're onboarded."`;
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
-        if (req.method !== "POST") {
-                    return res.status(405).json({ error: "Method not allowed" });
-        }
+            if (req.method !== "POST") {
+                            return res.status(405).json({ error: "Method not allowed" });
+            }
 
     const { messages, sessionId, userData } = req.body;
-        const { name, email, phone } = userData || {};
+            const { name, email, phone } = userData || {};
 
-    // Look up this client's current stage from the clients table
     const client = await getClientStage(email);
 
     let stageContext = "";
-        if (client) {
-                    stageContext = `
+            if (client) {
+                            stageContext = `
 
-                    VERIFIED CLIENT STATUS — pulled from our records by email. Do NOT ask whether they have started. Open by telling them exactly where they are and what their next step is.
+                            CLIENT STATUS (from our records — do not ask them about this, just use it):
+                            Stage: ${stageLabel(client.stage)}
+                            Health Permit: ${statusLabel(client.health_permit_status)}
+                            Insurance: ${statusLabel(client.insurance_status)}
+                            Food Manager Cert: ${statusLabel(client.food_manager_status)}
+                            ${client.notes ? `Notes: ${client.notes}` : ""}
 
-                    Current stage: ${stageLabel(client.stage)}
-                    - Orange County Health Permit: ${statusLabel(client.health_permit_status)}
-                    - General Liability Insurance: ${statusLabel(client.insurance_status)}
-                    - Food Manager Certificate: ${statusLabel(client.food_manager_status)}
-                    ${client.notes ? `- Internal notes: ${client.notes}` : ""}
+                            Lead with where they're at and what's next. One clear thing. Keep it casual, like you're catching them up.`;
+            } else if (email) {
+                            stageContext = `
 
-                    Use this information to lead with where the client stands and give them one clear, specific next action. If all three requirements are approved/completed, let them know they are ready and that the Co-Lab team will be in touch to schedule onboarding.`;
-        } else if (email) {
-                    stageContext = `
+                            This person (${email}) isn't in our system yet — probably a new inquiry. Ask where they're at in the process, keep it friendly, and nudge them toward youssef@co-lab.online to get things started.`;
+            }
 
-                    This client (${email}) is not yet in our system — they are likely a new inquiry or have not yet started the process. Ask them where they are in the process and encourage them to reach out to youssef@co-lab.online to get set up.`;
-        }
-
-    const systemPrompt = `You are chatting with: ${name || "a client"} (email: ${email || "unknown"}, phone: ${phone || "not provided"}).
+    const systemPrompt = `Chatting with: ${name || "a client"} (${email || "no email"}, ${phone || "no phone"}).
     ${stageContext}
 
     ${BASE_PROMPT}`;
 
     try {
-                const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
-                                method: "POST",
-                                headers: {
-                                                    "Content-Type": "application/json",
-                                                    "x-api-key": process.env.ANTHROPIC_API_KEY,
-                                                    "anthropic-version": "2023-06-01",
-                                },
-                                body: JSON.stringify({
-                                                    model: "claude-opus-4-5",
-                                                    max_tokens: 1024,
-                                                    system: systemPrompt,
-                                                    messages: messages.map((m) => ({ role: m.role, content: m.content })),
-                                }),
-                });
+                    const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
+                                        method: "POST",
+                                        headers: {
+                                                                "Content-Type": "application/json",
+                                                                "x-api-key": process.env.ANTHROPIC_API_KEY,
+                                                                "anthropic-version": "2023-06-01",
+                                        },
+                                        body: JSON.stringify({
+                                                                model: "claude-opus-4-5",
+                                                                max_tokens: 1024,
+                                                                system: systemPrompt,
+                                                                messages: messages.map((m) => ({ role: m.role, content: m.content })),
+                                        }),
+                    });
 
-            const data = await apiRes.json();
-                const reply = data?.content?.[0]?.text || "Sorry, I couldn't generate a response. Please email morgan@co-lab.online for help.";
+                const data = await apiRes.json();
+                    const reply = data?.content?.[0]?.text || "Sorry, having some trouble right now — email morgan@co-lab.online and they'll get you sorted.";
 
-            // Save log non-blocking
-            const lastUser = [...messages].reverse().find((m) => m.role === "user");
-                saveLog(sessionId, lastUser?.content ?? "", reply, userData);
+                const lastUser = [...messages].reverse().find((m) => m.role === "user");
+                    saveLog(sessionId, lastUser?.content ?? "", reply, userData);
 
-            return res.json({ reply });
+                return res.json({ reply });
     } catch (err) {
-                console.error("API error:", err);
-                return res.status(500).json({
-                                reply: "Sorry, I'm having trouble responding right now. Please email morgan@co-lab.online for immediate help.",
-                });
+                    console.error("API error:", err);
+                    return res.status(500).json({
+                                        reply: "Something went wrong on my end — reach out to morgan@co-lab.online for now.",
+                    });
     }
 }
